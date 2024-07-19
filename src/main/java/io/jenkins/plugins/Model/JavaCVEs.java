@@ -7,10 +7,19 @@ import lombok.*;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString
 public class JavaCVEs {
-    private String filePAth;
+    private String filePath;
     private String groupId;
     private String version;
     private String cves;
+
+    @Override
+    public String toString() {
+        return "{" +
+                "filePAth:'" + filePath + '\'' +
+                ", groupId:'" + groupId + '\'' +
+                ", version:'" + version + '\'' +
+                ", cves:'" + cves + '\'' +
+                '}';
+    }
 }

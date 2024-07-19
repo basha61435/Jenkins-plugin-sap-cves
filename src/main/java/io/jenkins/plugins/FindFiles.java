@@ -29,7 +29,7 @@ public class FindFiles {
                         for (String line : lines) {
                             if (line.contains("<artifactId>rate-email</artifactId>")) {
                                 JavaCVEs cvEs = new JavaCVEs();
-                                cvEs.setFilePAth(file.toString());
+                                cvEs.setFilePath(file.toString());
                                 cvEs.setCves("CVE-2023-50422");
                                 cvEs.setGroupId(line.trim());
                                 javaCVEsList.add(cvEs);
