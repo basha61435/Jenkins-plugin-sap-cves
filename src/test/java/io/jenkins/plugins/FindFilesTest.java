@@ -12,9 +12,7 @@ class FindFilesTest {
     void get() {
         FindFiles files = new FindFiles();
         List<JavaCVEs> list =  files.getJavaCVEs("C:\\Users\\Basha\\IdeaProjects\\ro-apps");
-
         System.out.println(list);
-
     }
 
 }
