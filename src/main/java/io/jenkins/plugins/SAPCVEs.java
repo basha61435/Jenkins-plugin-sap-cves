@@ -26,6 +26,8 @@ public class SAPCVEs extends Step {
     public String getPath() {
         return path;
     }
+   public SAPCVEs() {
+   }
 
     @Override
     public StepExecution start(StepContext stepContext) throws Exception {
