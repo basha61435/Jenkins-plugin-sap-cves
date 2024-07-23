@@ -1,0 +1,7 @@
+[
+  {
+    "library" : "@sap/approuter",
+    "version" : "15.1.0",
+    "cves" : "CVE-2023-49583"
+  }
+]

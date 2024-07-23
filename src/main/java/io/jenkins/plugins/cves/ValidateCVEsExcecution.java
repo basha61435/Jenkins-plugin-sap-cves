@@ -1,17 +1,15 @@
-package io.jenkins.plugins;
+package io.jenkins.plugins.cves;
 
 import hudson.FilePath;
 import hudson.model.TaskListener;
-import io.jenkins.plugins.Model.JavaCVEs;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 
-import javax.annotation.Nonnull;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ValidateCVEsExcecution extends SynchronousNonBlockingStepExecution<List<JavaCVEs>> implements Serializable {
+public class ValidateCVEsExcecution extends SynchronousNonBlockingStepExecution<List<CVEsModel>> implements Serializable {
 
     private static final long serialVersionUID = 1L;
 //    private transient SAPCVEs sapcvEs;
@@ -21,11 +19,11 @@ public class ValidateCVEsExcecution extends SynchronousNonBlockingStepExecution<
     }
 
     @Override
-    protected List<JavaCVEs> run() throws Exception {
+    protected List<CVEsModel> run() throws Exception {
         TaskListener listener = getContext().get(TaskListener.class);
         FilePath workspace = getContext().get(FilePath.class);
         String workspacePath = null;
-        List<JavaCVEs> javaCVEsList = new ArrayList<>();
+        List<CVEsModel> javaCVEsList = new ArrayList<>();
         if(workspace != null) {
             workspacePath = workspace.getRemote();
             FindFiles findFiles = new FindFiles();

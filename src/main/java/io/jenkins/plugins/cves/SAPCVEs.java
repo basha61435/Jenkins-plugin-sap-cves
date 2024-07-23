@@ -1,4 +1,4 @@
-package io.jenkins.plugins;
+package io.jenkins.plugins.cves;
 
 import hudson.Extension;
 import org.jenkinsci.plugins.workflow.steps.Step;
