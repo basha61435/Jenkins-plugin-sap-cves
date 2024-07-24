@@ -7,7 +7,7 @@ import lombok.*;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class CVEsModel {
+public class CVEsModel implements Cloneable{
     private String filePath;
     private String library;
     private String version;
@@ -23,5 +23,10 @@ public class CVEsModel {
                 ", cves='" + cves + '\'' +
                 ", url='" + url + '\'' +
                 '}';
+    }
+    @Override
+    public Object clone() throws CloneNotSupportedException {
+        CVEsModel cvEsModel = (CVEsModel) super.clone();
+        return cvEsModel;
     }
 }

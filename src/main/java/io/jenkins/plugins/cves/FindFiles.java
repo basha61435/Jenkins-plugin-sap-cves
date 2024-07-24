@@ -38,10 +38,24 @@ public class FindFiles {
         Path startDir = Paths.get(path);
         List<String> targetFiles = Arrays.asList("pom.xml", "package.json");
         ObjectMapper mapper = new ObjectMapper();
+        // TODO : getting  SAP CVEs json in Jenkins plugin
         List<CVEsModel> javaCVEsList = readJsonFile("JavaCVEsJson.json", mapper);
         listener.getLogger().println("test cves list for java :" + javaCVEsList);
         List<CVEsModel> nodeCVEsList = readJsonFile("NodeCVEsJson.json", mapper);
         listener.getLogger().println("test cves list for node :" + nodeCVEsList);
+        // TODO : getting  SAP CVEs json in local
+       /* String currentDirectory = System.getProperty("user.dir");
+        String javaJsonfilePath = String.format("%s/src/main/resources/JavaCVEsJson.json", currentDirectory);
+        List<CVEsModel> javaCVEsList = mapper.readValue(
+                new File(javaJsonfilePath),
+                mapper.getTypeFactory().constructCollectionType(List.class, CVEsModel.class)
+        );
+        String nodeJsonfilePath = String.format("%s\\src\\main\\resources\\NodeCVEsJson.json", currentDirectory);
+        List<CVEsModel> nodeCVEsList = mapper.readValue(
+                new File(nodeJsonfilePath),
+                mapper.getTypeFactory().constructCollectionType(List.class, CVEsModel.class)
+        );
+*/
         try {
             Files.walkFileTree(startDir, new SimpleFileVisitor<Path>() {
 
@@ -68,30 +82,26 @@ public class FindFiles {
                         } catch (SAXException e) {
                             throw new RuntimeException(e);
                         }
-
                         for (int i = 1; i < nodeList.getLength(); i++) {
                             Element element = (Element) nodeList.item(i);
                             NodeList groupIdList = element.getElementsByTagName("groupId");
                             NodeList version = element.getElementsByTagName("version");
                             if (groupIdList.getLength() > 0) {
                                 String groupId = groupIdList.item(0).getTextContent();
-                                // TODO : For local testing to read cves json file
-                             /*     String currentDirectory = System.getProperty("user.dir");
-                                String jsonfilePath = String.format("%s/src/main/resources/JavaCVEsJson.json", getPluginDirectoryPath());
-                                listener.getLogger().println("jsonfilePath :" + jsonfilePath);
-                                List<CVEsModel> nodeCVEsList = mapper.readValue(
-                                        new File(jsonfilePath),
-                                        mapper.getTypeFactory().constructCollectionType(List.class, CVEsModel.class)
-                                ); */
-
-                                for (CVEsModel cves : javaCVEsList) {
-                                    if (groupId.equalsIgnoreCase(cves.getLibrary())) {
+                                for (CVEsModel javacves : javaCVEsList) {
+                                    if (groupId.equalsIgnoreCase(javacves.getLibrary())) {
                                         if (version.getLength() > 0) {
                                             String codeVersion = version.item(0).getTextContent();
-                                            if (compare(codeVersion, cves.getVersion())) {
+                                            CVEsModel cves;
+                                            if (compare(codeVersion, javacves.getVersion())) {
+                                                try {
+                                                    cves = (CVEsModel) javacves.clone();
+                                                } catch (CloneNotSupportedException e) {
+                                                    throw new RuntimeException(e);
+                                                }
                                                 cves.setFilePath(file.toString());
                                                 cves.setVersion(codeVersion);
-                                                cves.setUrl(String.format(url, cves.getCves()));
+                                                cves.setUrl(String.format(url, javacves.getCves()));
                                                 cvesList.add(cves);
                                             }
                                         }
@@ -101,30 +111,28 @@ public class FindFiles {
                         }
                     }
                     if (file != null && targetFiles.get(1).contains(file.getFileName().toString())) {
-                        // TODO : For local testing to read cves json file
-                       /* String currentDirectory = System.getProperty("user.dir");
-                       String jsonfilePath = String.format("%s\\src\\main\\resources\\NodeCVEsJson.json", getPluginDirectoryPath());
-                       List<CVEsModel> node2 = mapper.readValue(
-                                new File(jsonfilePath),
-                                mapper.getTypeFactory().constructCollectionType(List.class, CVEsModel.class)
-                        );  */
-
                         JsonNode node = mapper.readValue(new File(file.toString()), JsonNode.class);
                         if (node.has("dependencies")) {
                             JsonNode no = node.get("dependencies");
-                            for (CVEsModel cves : nodeCVEsList) {
-                                if (no.has(cves.getLibrary())) {
-                                    String codeVersion = no.get(cves.getLibrary()).toString();
+                            for (CVEsModel nodeCVEs : nodeCVEsList) {
+                                if (no.has(nodeCVEs.getLibrary())) {
+                                    String codeVersion = no.get(nodeCVEs.getLibrary()).toString();
                                     String pattern = "\\d+\\.\\d+\\.\\d+";
                                     Pattern regex = Pattern.compile(pattern);
                                     Matcher matcher = regex.matcher(codeVersion);
                                     if (matcher.find()) {
                                         codeVersion = matcher.group();
                                     }
-                                    if (compare(codeVersion, cves.getVersion())) {
+                                    if (compare(codeVersion, nodeCVEs.getVersion())) {
+                                        CVEsModel cves;
+                                        try {
+                                            cves = (CVEsModel) nodeCVEs.clone();
+                                        } catch (CloneNotSupportedException e) {
+                                            throw new RuntimeException(e);
+                                        }
                                         cves.setFilePath(file.toString());
                                         cves.setVersion(codeVersion);
-                                        cves.setUrl(String.format(url, cves.getCves()));
+                                        cves.setUrl(String.format(url, nodeCVEs.getCves()));
                                         cvesList.add(cves);
                                     }
                                 }
