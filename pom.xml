@@ -14,7 +14,7 @@
   <version>${revision}${changelist}</version>
   <packaging>hpi</packaging>
 
-  <name>TODO Plugin</name>
+  <name>sap-cves</name>
   <url>https://github.com/jenkinsci/${project.artifactId}-plugin</url>
   <licenses>
     <license>
@@ -30,7 +30,7 @@
   </scm>
 
   <properties>
-    <revision>1.0</revision>
+    <revision>2.1</revision>
     <changelist>-SNAPSHOT</changelist>
     <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
     <jenkins.version>2.414.3</jenkins.version>
@@ -45,14 +45,11 @@
         <artifactId>bom-2.414.x</artifactId>
         <version>2907.vcb_35d6f2f7de</version>
         <type>pom</type>
-<!--        <scope>import</scope>-->
       </dependency>
-      <!-- Workflow Step API -->
       <dependency>
         <groupId>org.jenkins-ci.plugins.workflow</groupId>
         <artifactId>workflow-step-api</artifactId>
         <version>2.23</version>
-        <!--        <scope>runtime</scope>-->
       </dependency>
       <!-- https://mvnrepository.com/artifact/org.projectlombok/lombok -->
       <dependency>

@@ -12,10 +12,11 @@ import java.util.List;
 public class ValidateCVEsExcecution extends SynchronousNonBlockingStepExecution<List<CVEsModel>> implements Serializable {
 
     private static final long serialVersionUID = 1L;
-//    private transient SAPCVEs sapcvEs;
+    private transient SAPCVEs sapcvEs;
 
     protected ValidateCVEsExcecution(SAPCVEs sapcves, StepContext context) {
         super(context);
+        this.sapcvEs = sapcves;
     }
 
     @Override
@@ -27,7 +28,7 @@ public class ValidateCVEsExcecution extends SynchronousNonBlockingStepExecution<
         if(workspace != null) {
             workspacePath = workspace.getRemote();
             FindFiles findFiles = new FindFiles();
-            javaCVEsList = findFiles.getJavaCVEs(workspacePath);
+            javaCVEsList = findFiles.getJavaCVEs(workspacePath, listener);
         }
 
         listener.getLogger().println("path: " + workspacePath);

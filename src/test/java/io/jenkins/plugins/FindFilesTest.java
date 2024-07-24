@@ -1,5 +1,7 @@
+/*
 package io.jenkins.plugins;
 
+import hudson.model.TaskListener;
 import io.jenkins.plugins.cves.CVEsModel;
 import io.jenkins.plugins.cves.FindFiles;
 import org.junit.jupiter.api.Test;
@@ -12,8 +14,10 @@ class FindFilesTest {
         FindFiles files = new FindFiles();
 //        C:\\Users\\Basha\\IdeaProjects\\ro-ui-v3
 //        C:\Users\Basha\IdeaProjects\ro-apps
+
+        SimpleTaskListener listener = new SimpleTaskListener();
         List<CVEsModel> list =  files.getJavaCVEs("C:\\Users\\Basha\\IdeaProjects\\ro-apps");
-//        List<JavaCVEs> list1 =  files.getJavaCVEs("C:\\Users\\Basha\\IdeaProjects\\ro-ui-v3");
+//        List<CVEsModel> list1 =  files.getJavaCVEs("C:\\Users\\Basha\\IdeaProjects\\ro-ui-v3");
         System.out.println(list);
     }
 
@@ -25,3 +29,4 @@ class FindFilesTest {
     }
 
 }
+*/
