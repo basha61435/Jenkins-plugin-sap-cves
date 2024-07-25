@@ -14,14 +14,10 @@ class FindFilesTest {
     @Test
     void get() throws IOException {
         FindFiles files = new FindFiles();
-//        C:\\Users\\Basha\\IdeaProjects\\ro-ui-v3
-//        C:\Users\Basha\IdeaProjects\ro-apps
-
-//        SimpleTaskListener listener = new SimpleTaskListener();
         TaskListener dummyListener = new DummyTaskListener();
-        List<CVEsModel> list =  files.getJavaCVEs("C:\\Users\\Basha\\IdeaProjects\\ro-apps", dummyListener);
-//        List<CVEsModel> list1 =  files.getJavaCVEs("C:\\Users\\Basha\\IdeaProjects\\ro-ui-v3");
-        System.out.println(list);
+//        List<CVEsModel> list =  files.getCVEs("C:\\Users\\Basha\\IdeaProjects\\ro-apps", dummyListener);
+        List<CVEsModel> list1 =  files.getCVEs("C:\\Users\\Basha\\IdeaProjects\\ro-ui-v3", dummyListener);
+        System.out.println(list1);
     }
 
     @Test

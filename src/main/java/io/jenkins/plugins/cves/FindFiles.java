@@ -32,20 +32,20 @@ public class FindFiles {
     String format = "(\\w+\\.?)+";
     Pattern pattern = Pattern.compile(format);
 
-    public List<CVEsModel> getJavaCVEs(String path, TaskListener listener) throws IOException {
+    public List<CVEsModel> getCVEs(String path, TaskListener listener) throws IOException {
         List<CVEsModel> cvesList = new ArrayList<>();
-        Path startDir = Paths.get("C:\\Users\\Basha\\IdeaProjects\\ro-apps\\rate-parent");
+        Path startDir = Paths.get(path);
         List<String> targetFiles = Arrays.asList("pom.xml", "package.json");
         ObjectMapper mapper = new ObjectMapper();
         // TODO : getting  SAP CVEs json in Jenkins plugin
-       /* List<CVEsModel> javaCVEsList = readJsonFile("JavaCVEsJson.json", mapper);
+        List<CVEsModel> javaCVEsList = readJsonFile("JavaCVEsJson.json", mapper);
         listener.getLogger().println("test cves list for java :" + javaCVEsList);
         List<CVEsModel> nodeCVEsList = readJsonFile("NodeCVEsJson.json", mapper);
-        listener.getLogger().println("test cves list for node :" + nodeCVEsList);*/
+        listener.getLogger().println("test cves list for node :" + nodeCVEsList);
 
 
         // TODO : getting  SAP CVEs json in local
-        String currentDirectory = System.getProperty("user.dir");
+        /*String currentDirectory = System.getProperty("user.dir");
         String javaJsonfilePath = String.format("%s/src/main/resources/JavaCVEsJson.json", currentDirectory);
         List<CVEsModel> javaCVEsList = mapper.readValue(
                 new File(javaJsonfilePath),
@@ -55,7 +55,8 @@ public class FindFiles {
         List<CVEsModel> nodeCVEsList = mapper.readValue(
                 new File(nodeJsonfilePath),
                 mapper.getTypeFactory().constructCollectionType(List.class, CVEsModel.class)
-        );
+        );*/
+
         try {
             Files.walkFileTree(startDir, new SimpleFileVisitor<Path>() {
 
@@ -69,97 +70,107 @@ public class FindFiles {
 
                 @Override
                 public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                    DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-                    if (file != null && targetFiles.get(0).contains(file.getFileName().toString())) {
-                        NodeList nodeList;
-                        NodeList nodePropertiesList;
-                        try {
-                            DocumentBuilder builder = factory.newDocumentBuilder();
-                            Document document = builder.parse(file.toString());
-                            document.getDocumentElement().normalize();
-                            nodeList = document.getElementsByTagName("dependency");
-                            nodePropertiesList = document.getElementsByTagName("properties");
-                        } catch (ParserConfigurationException e) {
-                            throw new RuntimeException(e);
-                        } catch (SAXException e) {
-                            throw new RuntimeException(e);
-                        }
-                        Map<String, String> propertiesMap = new HashMap<>();
-                        for (int j = 0; j < nodePropertiesList.getLength(); j++) {
-                            Element propertiesElement = (Element) nodePropertiesList.item(j);
-                            NodeList propertiesChildren = propertiesElement.getChildNodes();
 
-                            for (int k = 0; k < propertiesChildren.getLength(); k++) {
-                                Node node = propertiesChildren.item(k);
-                                if (node instanceof Element) {
-                                    propertiesMap.put(node.getNodeName(), node.getTextContent());
-                                }
-                            }
-                        }
-                        for (int i = 1; i < nodeList.getLength(); i++) {
-                            Element element = (Element) nodeList.item(i);
-                            NodeList groupIdList = element.getElementsByTagName("groupId");
-                            NodeList versionList = element.getElementsByTagName("version");
-
-                            if (groupIdList.getLength() > 0) {
-                                String groupId = groupIdList.item(0).getTextContent();
-                                for (CVEsModel javacves : javaCVEsList) {
-                                    if (groupId.equalsIgnoreCase(javacves.getLibrary())) {
-                                        if (versionList.getLength() > 0) {
-                                            String version = versionList.item(0).getTextContent();
-                                            String codeVersion = getSourceCodeLibraryVersion(version);
-                                            if( !isInteger(codeVersion.split("\\.")[0])) {
-                                                codeVersion = propertiesMap.get(codeVersion);
-                                            }
-                                            CVEsModel cves;
-                                            if (compare(codeVersion, javacves.getVersion())) {
-                                                try {
-                                                    cves = (CVEsModel) javacves.clone();
-                                                } catch (CloneNotSupportedException e) {
-                                                    throw new RuntimeException(e);
-                                                }
-                                                cves.setFilePath(file.toString());
-                                                cves.setVersion(codeVersion);
-                                                cves.setUrl(String.format(url, javacves.getCves()));
-                                                cvesList.add(cves);
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    if (file != null && targetFiles.get(1).contains(file.getFileName().toString())) {
-                        JsonNode node = mapper.readValue(new File(file.toString()), JsonNode.class);
-                        if (node.has("dependencies")) {
-                            JsonNode no = node.get("dependencies");
-                            for (CVEsModel nodeCVEs : nodeCVEsList) {
-                                if (no.has(nodeCVEs.getLibrary())) {
-                                    String codeVersion = getSourceCodeLibraryVersion(no.get(nodeCVEs.getLibrary()).toString());
-                                    if (compare(codeVersion, nodeCVEs.getVersion())) {
-                                        CVEsModel cves;
-                                        try {
-                                            cves = (CVEsModel) nodeCVEs.clone();
-                                        } catch (CloneNotSupportedException e) {
-                                            throw new RuntimeException(e);
-                                        }
-                                        cves.setFilePath(file.toString());
-                                        cves.setVersion(codeVersion);
-                                        cves.setUrl(String.format(url, nodeCVEs.getCves()));
-                                        cvesList.add(cves);
-                                    }
-                                }
-                            }
+                    if (file != null && targetFiles.contains(file.getFileName().toString())) {
+                        if (file.getFileName().toString().equals("pom.xml")) {
+                            prepareJavaCVEs(file, cvesList, javaCVEsList);
+                        } else if (file.getFileName().toString().equals("package.json")) {
+                            prepareNodeCVEs(file, cvesList, nodeCVEsList, mapper);
                         }
                     }
                     return FileVisitResult.CONTINUE;
                 }
             });
         } catch (IOException e) {
-            e.printStackTrace();
+            listener.getLogger().println("Error traversing files: " + e.getMessage());
         }
 
         return cvesList;
+    }
+
+    private void prepareJavaCVEs(Path file, List<CVEsModel> cvesList, List<CVEsModel> javaCVEsList) {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        NodeList nodeList;
+        NodeList nodePropertiesList;
+        try {
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document document = builder.parse(file.toString());
+            document.getDocumentElement().normalize();
+            nodeList = document.getElementsByTagName("dependency");
+            nodePropertiesList = document.getElementsByTagName("properties");
+        } catch (ParserConfigurationException | IOException e) {
+            throw new RuntimeException(e);
+        } catch (SAXException e) {
+            throw new RuntimeException(e);
+        }
+        Map<String, String> propertiesMap = new HashMap<>();
+        for (int j = 0; j < nodePropertiesList.getLength(); j++) {
+            Element propertiesElement = (Element) nodePropertiesList.item(j);
+            NodeList propertiesChildren = propertiesElement.getChildNodes();
+
+            for (int k = 0; k < propertiesChildren.getLength(); k++) {
+                Node node = propertiesChildren.item(k);
+                if (node instanceof Element) {
+                    propertiesMap.put(node.getNodeName(), node.getTextContent());
+                }
+            }
+        }
+        for (int i = 1; i < nodeList.getLength(); i++) {
+            Element element = (Element) nodeList.item(i);
+            NodeList groupIdList = element.getElementsByTagName("groupId");
+            NodeList versionList = element.getElementsByTagName("version");
+
+            if (groupIdList.getLength() > 0) {
+                String groupId = groupIdList.item(0).getTextContent();
+                for (CVEsModel javacves : javaCVEsList) {
+                    if (groupId.equalsIgnoreCase(javacves.getLibrary())) {
+                        if (versionList.getLength() > 0) {
+                            String version = versionList.item(0).getTextContent();
+                            String codeVersion = getSourceCodeLibraryVersion(version);
+                            if( !isInteger(codeVersion.split("\\.")[0])) {
+                                codeVersion = propertiesMap.get(codeVersion);
+                            }
+                            CVEsModel cves;
+                            if (compare(codeVersion, javacves.getVersion())) {
+                                try {
+                                    cves = (CVEsModel) javacves.clone();
+                                } catch (CloneNotSupportedException e) {
+                                    throw new RuntimeException(e);
+                                }
+                                cves.setFilePath(file.toString());
+                                cves.setVersion(codeVersion);
+                                cves.setUrl(String.format(url, javacves.getCves()));
+                                cvesList.add(cves);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void prepareNodeCVEs(Path file, List<CVEsModel> cvesList, List<CVEsModel> nodeCVEsList, ObjectMapper mapper) throws IOException {
+        JsonNode node = mapper.readValue(new File(file.toString()), JsonNode.class);
+        if (node.has("dependencies")) {
+            JsonNode no = node.get("dependencies");
+            for (CVEsModel nodeCVEs : nodeCVEsList) {
+                if (no.has(nodeCVEs.getLibrary())) {
+                    String codeVersion = getSourceCodeLibraryVersion(no.get(nodeCVEs.getLibrary()).toString());
+                    if (compare(codeVersion, nodeCVEs.getVersion())) {
+                        CVEsModel cves;
+                        try {
+                            cves = (CVEsModel) nodeCVEs.clone();
+                        } catch (CloneNotSupportedException e) {
+                            throw new RuntimeException(e);
+                        }
+                        cves.setFilePath(file.toString());
+                        cves.setVersion(codeVersion);
+                        cves.setUrl(String.format(url, nodeCVEs.getCves()));
+                        cvesList.add(cves);
+                    }
+                }
+            }
+        }
     }
 
     public boolean compare(String codeVer, String cveVersion) {

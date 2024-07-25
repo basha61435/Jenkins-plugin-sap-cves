@@ -28,7 +28,7 @@ public class ValidateCVEsExcecution extends SynchronousNonBlockingStepExecution<
         if(workspace != null) {
             workspacePath = workspace.getRemote();
             FindFiles findFiles = new FindFiles();
-            javaCVEsList = findFiles.getJavaCVEs(workspacePath, listener);
+            javaCVEsList = findFiles.getCVEs(workspacePath, listener);
         }
 
         listener.getLogger().println("path: " + workspacePath);
