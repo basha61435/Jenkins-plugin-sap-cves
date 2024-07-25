@@ -7,6 +7,8 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 class FindFilesTest {
     @Test
@@ -27,6 +29,16 @@ class FindFilesTest {
         FindFiles files = new FindFiles();
         boolean bol = files.compare("14.1.2", "15.1.0");
         System.out.println("compare :"+bol);
+    }
+    @Test
+    void pattern() {
+        String format = "(\\w+\\.?)+";
+        Pattern pattern = Pattern.compile(format);
+        String codeVersion =  "\"\\^2.123.23\"/\"";
+        Matcher matcher = pattern.matcher(codeVersion);
+        if(matcher.find()) {
+            System.out.println(matcher.group());
+        }
     }
 
 }
