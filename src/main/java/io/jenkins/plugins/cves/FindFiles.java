@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import hudson.model.TaskListener;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
@@ -22,29 +23,29 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.codehaus.groovy.runtime.StringGroovyMethods.isInteger;
-
 public class FindFiles {
     String url = "https://www.cve.org/CVERecord?id=%s";
+    String format = "(\\w+\\.?)+";
+    Pattern pattern = Pattern.compile(format);
 
     public List<CVEsModel> getJavaCVEs(String path, TaskListener listener) throws IOException {
         List<CVEsModel> cvesList = new ArrayList<>();
-        Path startDir = Paths.get(path);
+        Path startDir = Paths.get("C:\\Users\\Basha\\IdeaProjects\\ro-apps\\rate-parent");
         List<String> targetFiles = Arrays.asList("pom.xml", "package.json");
         ObjectMapper mapper = new ObjectMapper();
         // TODO : getting  SAP CVEs json in Jenkins plugin
-        List<CVEsModel> javaCVEsList = readJsonFile("JavaCVEsJson.json", mapper);
+       /* List<CVEsModel> javaCVEsList = readJsonFile("JavaCVEsJson.json", mapper);
         listener.getLogger().println("test cves list for java :" + javaCVEsList);
         List<CVEsModel> nodeCVEsList = readJsonFile("NodeCVEsJson.json", mapper);
-        listener.getLogger().println("test cves list for node :" + nodeCVEsList);
+        listener.getLogger().println("test cves list for node :" + nodeCVEsList);*/
+
+
         // TODO : getting  SAP CVEs json in local
-       /* String currentDirectory = System.getProperty("user.dir");
+        String currentDirectory = System.getProperty("user.dir");
         String javaJsonfilePath = String.format("%s/src/main/resources/JavaCVEsJson.json", currentDirectory);
         List<CVEsModel> javaCVEsList = mapper.readValue(
                 new File(javaJsonfilePath),
@@ -55,7 +56,6 @@ public class FindFiles {
                 new File(nodeJsonfilePath),
                 mapper.getTypeFactory().constructCollectionType(List.class, CVEsModel.class)
         );
-*/
         try {
             Files.walkFileTree(startDir, new SimpleFileVisitor<Path>() {
 
@@ -72,26 +72,45 @@ public class FindFiles {
                     DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
                     if (file != null && targetFiles.get(0).contains(file.getFileName().toString())) {
                         NodeList nodeList;
+                        NodeList nodePropertiesList;
                         try {
                             DocumentBuilder builder = factory.newDocumentBuilder();
                             Document document = builder.parse(file.toString());
                             document.getDocumentElement().normalize();
                             nodeList = document.getElementsByTagName("dependency");
+                            nodePropertiesList = document.getElementsByTagName("properties");
                         } catch (ParserConfigurationException e) {
                             throw new RuntimeException(e);
                         } catch (SAXException e) {
                             throw new RuntimeException(e);
                         }
+                        Map<String, String> propertiesMap = new HashMap<>();
+                        for (int j = 0; j < nodePropertiesList.getLength(); j++) {
+                            Element propertiesElement = (Element) nodePropertiesList.item(j);
+                            NodeList propertiesChildren = propertiesElement.getChildNodes();
+
+                            for (int k = 0; k < propertiesChildren.getLength(); k++) {
+                                Node node = propertiesChildren.item(k);
+                                if (node instanceof Element) {
+                                    propertiesMap.put(node.getNodeName(), node.getTextContent());
+                                }
+                            }
+                        }
                         for (int i = 1; i < nodeList.getLength(); i++) {
                             Element element = (Element) nodeList.item(i);
                             NodeList groupIdList = element.getElementsByTagName("groupId");
-                            NodeList version = element.getElementsByTagName("version");
+                            NodeList versionList = element.getElementsByTagName("version");
+
                             if (groupIdList.getLength() > 0) {
                                 String groupId = groupIdList.item(0).getTextContent();
                                 for (CVEsModel javacves : javaCVEsList) {
                                     if (groupId.equalsIgnoreCase(javacves.getLibrary())) {
-                                        if (version.getLength() > 0) {
-                                            String codeVersion = version.item(0).getTextContent();
+                                        if (versionList.getLength() > 0) {
+                                            String version = versionList.item(0).getTextContent();
+                                            String codeVersion = getSourceCodeLibraryVersion(version);
+                                            if( !isInteger(codeVersion.split("\\.")[0])) {
+                                                codeVersion = propertiesMap.get(codeVersion);
+                                            }
                                             CVEsModel cves;
                                             if (compare(codeVersion, javacves.getVersion())) {
                                                 try {
@@ -116,13 +135,7 @@ public class FindFiles {
                             JsonNode no = node.get("dependencies");
                             for (CVEsModel nodeCVEs : nodeCVEsList) {
                                 if (no.has(nodeCVEs.getLibrary())) {
-                                    String codeVersion = no.get(nodeCVEs.getLibrary()).toString();
-                                    String pattern = "\\d+\\.\\d+\\.\\d+";
-                                    Pattern regex = Pattern.compile(pattern);
-                                    Matcher matcher = regex.matcher(codeVersion);
-                                    if (matcher.find()) {
-                                        codeVersion = matcher.group();
-                                    }
+                                    String codeVersion = getSourceCodeLibraryVersion(no.get(nodeCVEs.getLibrary()).toString());
                                     if (compare(codeVersion, nodeCVEs.getVersion())) {
                                         CVEsModel cves;
                                         try {
@@ -152,9 +165,7 @@ public class FindFiles {
     public boolean compare(String codeVer, String cveVersion) {
         String[] codeSplit = codeVer.split("\\.");
         String[] cveSplit = cveVersion.split("\\.");
-        if (!isInteger(codeSplit[0])) {
-            return false;
-        }
+
         if (Integer.parseInt(codeSplit[0]) == Integer.parseInt(cveSplit[0])) {
             return Integer.parseInt(codeSplit[1]) < Integer.parseInt(cveSplit[1]);
 
@@ -174,7 +185,16 @@ public class FindFiles {
         return cvesList;
     }
 
-    /*private static boolean isInteger(String str) {
+    private String getSourceCodeLibraryVersion(String libraryVersion) {
+        Matcher matcher = pattern.matcher(libraryVersion);
+        String version = null;
+        if (matcher.find()) {
+            version = matcher.group();
+        }
+        return version;
+    }
+
+    private static boolean isInteger(String str) {
         if (str == null) {
             return false;
         }
@@ -184,5 +204,6 @@ public class FindFiles {
             return false;
         }
         return true;
-    }*/
+    }
+
 }
