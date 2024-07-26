@@ -29,7 +29,7 @@ import java.util.regex.Pattern;
 
 public class FindFiles {
     String url = "https://www.cve.org/CVERecord?id=%s";
-    String format = "(\\w+\\.?)+";
+    String format = "[\\w.-]+";
     Pattern pattern = Pattern.compile(format);
 
     public List<CVEsModel> getCVEs(String path, TaskListener listener) throws IOException {
@@ -37,25 +37,11 @@ public class FindFiles {
         Path startDir = Paths.get(path);
         List<String> targetFiles = Arrays.asList("pom.xml", "package.json");
         ObjectMapper mapper = new ObjectMapper();
-        // TODO : getting  SAP CVEs json in Jenkins plugin
+
         List<CVEsModel> javaCVEsList = readJsonFile("JavaCVEsJson.json", mapper);
         listener.getLogger().println("test cves list for java :" + javaCVEsList);
         List<CVEsModel> nodeCVEsList = readJsonFile("NodeCVEsJson.json", mapper);
         listener.getLogger().println("test cves list for node :" + nodeCVEsList);
-
-
-        // TODO : getting  SAP CVEs json in local
-        /*String currentDirectory = System.getProperty("user.dir");
-        String javaJsonfilePath = String.format("%s/src/main/resources/JavaCVEsJson.json", currentDirectory);
-        List<CVEsModel> javaCVEsList = mapper.readValue(
-                new File(javaJsonfilePath),
-                mapper.getTypeFactory().constructCollectionType(List.class, CVEsModel.class)
-        );
-        String nodeJsonfilePath = String.format("%s\\src\\main\\resources\\NodeCVEsJson.json", currentDirectory);
-        List<CVEsModel> nodeCVEsList = mapper.readValue(
-                new File(nodeJsonfilePath),
-                mapper.getTypeFactory().constructCollectionType(List.class, CVEsModel.class)
-        );*/
 
         try {
             Files.walkFileTree(startDir, new SimpleFileVisitor<Path>() {
@@ -98,9 +84,7 @@ public class FindFiles {
             document.getDocumentElement().normalize();
             nodeList = document.getElementsByTagName("dependency");
             nodePropertiesList = document.getElementsByTagName("properties");
-        } catch (ParserConfigurationException | IOException e) {
-            throw new RuntimeException(e);
-        } catch (SAXException e) {
+        } catch (ParserConfigurationException | IOException | SAXException e) {
             throw new RuntimeException(e);
         }
         Map<String, String> propertiesMap = new HashMap<>();
@@ -127,7 +111,7 @@ public class FindFiles {
                         if (versionList.getLength() > 0) {
                             String version = versionList.item(0).getTextContent();
                             String codeVersion = getSourceCodeLibraryVersion(version);
-                            if( !isInteger(codeVersion.split("\\.")[0])) {
+                            if (!isInteger(codeVersion.split("\\.")[0])) {
                                 codeVersion = propertiesMap.get(codeVersion);
                             }
                             CVEsModel cves;
@@ -174,22 +158,23 @@ public class FindFiles {
     }
 
     public boolean compare(String codeVer, String cveVersion) {
-        String[] codeSplit = codeVer.split("\\.");
-        String[] cveSplit = cveVersion.split("\\.");
+        if(codeVer != null && cveVersion != null) {
+            String[] codeSplit = codeVer.split("\\.");
+            String[] cveSplit = cveVersion.split("\\.");
 
-        if (Integer.parseInt(codeSplit[0]) == Integer.parseInt(cveSplit[0])) {
-            return Integer.parseInt(codeSplit[1]) < Integer.parseInt(cveSplit[1]);
+            if (Integer.parseInt(codeSplit[0]) == Integer.parseInt(cveSplit[0])) {
+                return Integer.parseInt(codeSplit[1]) < Integer.parseInt(cveSplit[1]);
 
-        } else return Integer.parseInt(codeSplit[0]) < Integer.parseInt(cveSplit[0]);
+            } else return Integer.parseInt(codeSplit[0]) < Integer.parseInt(cveSplit[0]);
+        }
+        return false;
     }
 
     private List<CVEsModel> readJsonFile(String fileName, ObjectMapper mapper) throws IOException {
-        // Use getClass().getResourceAsStream() to get the file from the classpath
         InputStream inputStream = getClass().getClassLoader().getResourceAsStream(fileName);
         if (inputStream == null) {
             throw new IOException("Resource not found: " + fileName);
         }
-        // Convert InputStream to String
         String jsonContent = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
         List<CVEsModel> cvesList = mapper.readValue(jsonContent, new TypeReference<List<CVEsModel>>() {
         });
